@@ -6,7 +6,7 @@ import {
   type Product,
 } from "@/data/products";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://esmil-system-bzhz.vercel.app";
+const API_URL = import.meta.env.VITE_API_URL;
 
 type ApiCategory = {
   _id: string;
