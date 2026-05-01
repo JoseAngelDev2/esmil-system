@@ -13,6 +13,7 @@ const defaultOrigins = [
   "http://localhost:5174",
   "http://localhost:3001",
   "http://localhost:8080",
+  "https://esmil-system-bzhz.vercel.app/"
 ];
 
 const configuredOrigins = [
