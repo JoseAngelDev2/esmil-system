@@ -55,10 +55,24 @@ function Reservar() {
       return;
     }
 
-    const lines = items
-      .map((i) => `• ${i.quantity}x ${i.name} — RD$${(i.price * i.quantity).toFixed(2)}`)
-      .join("\n");
-    const msg = `¡Hola ${BUSINESS.name}! 🍭 Quiero reservar este pedido:\n\n${lines}\n\n*Total: RD$${totalPrice().toFixed(2)}*\n\n👤 Nombre: ${form.name}\n📞 Teléfono: ${form.phone}\n📍 Dirección: ${form.address}\n🚚 Modalidad: ${form.mode}\n📅 Fecha: ${form.date}\n⏰ Hora: ${form.time}${form.notes ? `\n📝 Notas: ${form.notes}` : ""}`;
+    const msg = [
+      `\u00a1Hola ${BUSINESS.name}! \u{1F36D} Quiero reservar este pedido:`,
+      ``,
+      ...items.map(
+        (i) =>
+          `\u2022 ${i.quantity}x ${i.name} \u2014 RD$${(i.price * i.quantity).toFixed(2)}`
+      ),
+      ``,
+      `*Total: RD$${totalPrice().toFixed(2)}*`,
+      ``,
+      `\u{1F464} Nombre: ${form.name}`,
+      `\u{1F4DE} Tel\u00e9fono: ${form.phone}`,
+      `\u{1F4CD} Direcci\u00f3n: ${form.address}`,
+      `\u{1F69A} Modalidad: ${form.mode}`,
+      `\u{1F4C5} Fecha: ${form.date}`,
+      `\u23F0 Hora: ${form.time}`,
+      ...(form.notes ? [`\u{1F4DD} Notas: ${form.notes}`] : []),
+    ].join("\n");
 
     try {
       await createOrder({
@@ -79,8 +93,10 @@ function Reservar() {
           .join("\n"),
       });
       toast.success("Pedido registrado en el dashboard");
-    } catch (error) {
-      toast.warning("No se pudo registrar en el dashboard, pero puedes enviarlo por WhatsApp");
+    } catch {
+      toast.warning(
+        "No se pudo registrar en el dashboard, pero puedes enviarlo por WhatsApp"
+      );
     }
 
     const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(msg)}`;
