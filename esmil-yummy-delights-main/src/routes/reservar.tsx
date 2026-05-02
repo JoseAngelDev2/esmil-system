@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Layout } from "@/components/Layout";
 import { useCart, BUSINESS } from "@/store/cart";
 import { AddressPicker } from "@/components/AddressPicker";
-import { createOrder } from "@/services/catalog";
+import { crearPedido } from "@/api/api";
 
 export const Route = createFileRoute("/reservar")({
   head: () => ({
@@ -60,30 +60,26 @@ function Reservar() {
       .join("\n");
     const msg = `¡Hola ${BUSINESS.name}! 🍭 Quiero reservar este pedido:\n\n${lines}\n\n*Total: RD$${totalPrice().toFixed(2)}*\n\n👤 Nombre: ${form.name}\n📞 Teléfono: ${form.phone}\n📍 Dirección: ${form.address}\n🚚 Modalidad: ${form.mode}\n📅 Fecha: ${form.date}\n⏰ Hora: ${form.time}${form.notes ? `\n📝 Notas: ${form.notes}` : ""}`;
 
+    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(msg)}`;
+
     try {
-      await createOrder({
+      await crearPedido({
         cliente: form.name,
         telefono: form.phone,
         productos: items.map((item) => ({
           producto: item.id,
-          cantidad: item.quantity,
+          nombre: item.name,
+          precio: item.price,
+          cantidad: item.quantity ?? item.cantidad ?? 1,
         })),
         fecha: form.date,
         hora: form.time,
-        notas: [
-          `Direccion: ${form.address}`,
-          `Modalidad: ${form.mode}`,
-          form.notes ? `Notas: ${form.notes}` : "",
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        notas: form.notes || "",
       });
-      toast.success("Pedido registrado en el dashboard");
-    } catch (error) {
-      toast.warning("No se pudo registrar en el dashboard, pero puedes enviarlo por WhatsApp");
+    } catch (_) {
+      // silencioso: si falla el backend, WhatsApp igual se abre
     }
 
-    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(msg)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
