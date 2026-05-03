@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Minus, Plus, Trash2, MessageCircle } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Layout } from "@/components/Layout";
@@ -23,10 +23,10 @@ export const Route = createFileRoute("/reservar")({
 });
 
 const formSchema = z.object({
-  name: z.string().trim().min(2, "Nombre muy corto").max(80),
-  phone: z.string().trim().min(7, "Teléfono inválido").max(20),
-  address: z.string().trim().min(5, "Dirección requerida").max(200),
-  date: z.string().min(1, "Selecciona una fecha"),
+  name: z.string().trim().min(2).max(80),
+  phone: z.string().trim().min(7).max(20),
+  address: z.string().trim().min(5).max(200),
+  date: z.string().min(1),
   mode: z.enum(["entrega", "recogida"]),
   notes: z.string().max(300).optional(),
 });
@@ -58,24 +58,31 @@ function Reservar() {
     }
 
     const msg = [
-      `¡Hola ${BUSINESS.name}! 🍭 Quiero reservar este pedido:`,
+      `Hola ${BUSINESS.name}!`,
+      `Quiero reservar este pedido:`,
       ``,
       ...items.map(
         (i) =>
-          `• ${i.quantity}x ${i.name} — RD$${(
+          `- ${i.quantity}x ${i.name} RD$${(
             i.price * i.quantity
           ).toFixed(2)}`
       ),
       ``,
-      `*Total: RD$${totalPrice().toFixed(2)}*`,
+      `Total: RD$${totalPrice().toFixed(2)}`,
       ``,
-      `👤 Nombre: ${form.name}`,
-      `📞 Teléfono: ${form.phone}`,
-      `📍 Dirección: ${form.address}`,
-      `🚚 Modalidad: ${form.mode}`,
-      `📅 Fecha: ${form.date}`,
-      ...(form.notes ? [`📝 Notas: ${form.notes}`] : []),
+      `Nombre: ${form.name}`,
+      `Telefono: ${form.phone}`,
+      `Direccion: ${form.address}`,
+      `Modalidad: ${form.mode}`,
+      `Fecha: ${form.date}`,
+      ...(form.notes ? [`Notas: ${form.notes}`] : []),
     ].join("\n");
+
+    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(
+      msg
+    )}`;
+
+    const whatsappWindow = window.open("", "_blank");
 
     try {
       await createOrder({
@@ -86,237 +93,133 @@ function Reservar() {
           cantidad: item.quantity,
         })),
         fecha: form.date,
-        notas: [
-          `Direccion: ${form.address}`,
-          `Modalidad: ${form.mode}`,
-          form.notes ? `Notas: ${form.notes}` : "",
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        notas: `Direccion: ${form.address}\nModalidad: ${form.mode}\n${form.notes || ""}`,
       });
-      toast.success("Pedido registrado en el dashboard");
+
+      toast.success("Pedido registrado");
     } catch {
-      toast.warning(
-        "No se pudo registrar en el dashboard, pero puedes enviarlo por WhatsApp"
-      );
+      toast.warning("No se guardó, pero puedes enviarlo");
     }
 
-    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(
-      msg
-    )}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    if (whatsappWindow) {
+      whatsappWindow.location.href = url;
+    } else {
+      window.location.href = url;
+    }
   };
 
   return (
     <Layout>
-      <section className="bg-gradient-warm py-12">
-        <div className="container mx-auto px-4 text-center text-primary-foreground">
-          <h1 className="font-display text-4xl md:text-5xl font-bold">
-            Reservar pedido
-          </h1>
-          <p className="mt-2 text-primary-foreground/90">
-            Revisa tu carrito y completa tus datos
-          </p>
-        </div>
+      <section className="bg-gradient-warm py-12 text-center text-white">
+        <h1 className="text-4xl font-bold">Reservar pedido</h1>
+        <p>Revisa tu carrito y completa tus datos</p>
       </section>
 
       <section className="container mx-auto px-4 py-10 grid lg:grid-cols-3 gap-8">
         {/* Carrito */}
-        <div className="lg:col-span-2 bg-card rounded-3xl shadow-soft p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-2xl font-bold">Tu carrito</h2>
-            {items.length > 0 && (
-              <button
-                onClick={clear}
-                className="text-sm text-destructive hover:underline"
-              >
-                Vaciar
+        <div className="lg:col-span-2 bg-card rounded-3xl p-6">
+          <h2 className="text-2xl font-bold mb-4">Tu carrito</h2>
+
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 py-3">
+              <div className="text-2xl">{item.emoji}</div>
+
+              <div className="flex-1">
+                <p>{item.name}</p>
+                <p>RD${item.price}</p>
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => setQuantity(item.id, item.quantity - 1)}>
+                  <Minus />
+                </button>
+                <span>{item.quantity}</span>
+                <button onClick={() => setQuantity(item.id, item.quantity + 1)}>
+                  <Plus />
+                </button>
+              </div>
+
+              <button onClick={() => remove(item.id)}>
+                <Trash2 />
               </button>
-            )}
-          </div>
-
-          {items.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-5xl mb-3">🛒</p>
-              <p>Aún no tienes productos. Visita el catálogo.</p>
             </div>
-          ) : (
-            <ul className="divide-y divide-border">
-              {items.map((item) => (
-                <li key={item.id} className="py-4 flex items-center gap-3">
-                  <div className="size-14 rounded-xl bg-gradient-warm flex items-center justify-center text-3xl shrink-0 overflow-hidden">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      item.emoji
-                    )}
-                  </div>
+          ))}
 
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      RD${item.price}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1 bg-secondary rounded-full p-1">
-                    <button
-                      onClick={() =>
-                        setQuantity(item.id, item.quantity - 1)
-                      }
-                      className="size-7 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Minus className="size-3" />
-                    </button>
-
-                    <span className="w-6 text-center font-semibold text-sm">
-                      {item.quantity}
-                    </span>
-
-                    <button
-                      onClick={() =>
-                        setQuantity(item.id, item.quantity + 1)
-                      }
-                      className="size-7 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Plus className="size-3" />
-                    </button>
-                  </div>
-
-                  <p className="font-bold text-primary w-20 text-right">
-                    RD${(item.price * item.quantity).toFixed(0)}
-                  </p>
-
-                  <button
-                    onClick={() => remove(item.id)}
-                    className="text-muted-foreground hover:text-destructive p-1"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {items.length > 0 && (
-            <div className="border-t border-border mt-4 pt-4 flex items-center justify-between">
-              <span className="font-display text-lg">Total</span>
-              <span className="font-display text-2xl font-bold text-primary">
-                RD${totalPrice().toFixed(2)}
-              </span>
-            </div>
-          )}
+          <p className="font-bold mt-4">
+            Total: RD${totalPrice().toFixed(2)}
+          </p>
         </div>
 
-        {/* Formulario */}
+        {/* FORM */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             setConfirmOpen(true);
           }}
-          className="bg-card rounded-3xl shadow-soft p-6 space-y-4 h-fit lg:sticky lg:top-20"
+          className="bg-card rounded-3xl p-6 space-y-4"
         >
-          <h2 className="font-display text-2xl font-bold">Tus datos</h2>
+          <h2 className="text-2xl font-bold">Tus datos</h2>
 
-          <div>
-            <label className="text-sm font-semibold">Nombre completo</label>
-            <input
-              type="text"
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5"
-              placeholder="María Pérez"
-            />
-          </div>
+          <input
+            placeholder="Nombre"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="w-full border p-2 rounded"
+          />
 
-          <div>
-            <label className="text-sm font-semibold">Teléfono</label>
-            <input
-              type="tel"
-              required
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5"
-              placeholder="809-000-0000"
-            />
-          </div>
+          <input
+            placeholder="Teléfono"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            className="w-full border p-2 rounded"
+          />
 
-          <div>
-            <label className="text-sm font-semibold">Dirección</label>
-            <div className="mt-1">
-              <AddressPicker
-                value={form.address}
-                onChange={(address: string) =>
-                  setForm({ ...form, address })
-                }
-              />
-            </div>
-          </div>
+          <AddressPicker
+            value={form.address}
+            onChange={(address: string) =>
+              setForm({ ...form, address })
+            }
+          />
 
-          <div>
-            <label className="text-sm font-semibold">Fecha</label>
-            <input
-              type="date"
-              required
-              value={form.date}
-              min={new Date().toISOString().split("T")[0]}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5"
-            />
-          </div>
+          <input
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            className="w-full border p-2 rounded"
+          />
 
-          <div>
-            <label className="text-sm font-semibold">Notas (opcional)</label>
-            <textarea
-              rows={2}
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5 resize-none"
-              placeholder="Referencia, instrucciones..."
-            />
-          </div>
+          <textarea
+            placeholder="Notas"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            className="w-full border p-2 rounded"
+          />
 
-          <button className="w-full bg-[#25D366] text-white py-3 rounded-full font-bold">
+          <button className="w-full bg-green-500 text-white py-3 rounded-full">
             Confirmar por WhatsApp
           </button>
         </form>
       </section>
 
-      {/* Modal */}
+      {/* MODAL */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-          <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6">
-            <h3 className="text-lg font-bold text-center mb-2">
-              Confirmar pedido
-            </h3>
-
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              ¿Estás seguro de realizar esta reserva?
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center">
+          <div className="bg-white p-6 rounded-t-3xl w-full max-w-md">
+            <p className="text-center mb-4">
+              ¿Confirmar pedido?
             </p>
 
-            <p className="text-center font-bold text-xl mb-4">
-              RD${totalPrice().toFixed(2)}
-            </p>
-
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 onClick={() => setConfirmOpen(false)}
-                className="flex-1 py-3 rounded-full bg-secondary"
+                className="flex-1 bg-gray-200 p-3 rounded"
               >
                 Cancelar
               </button>
 
               <button
-                onClick={async () => {
-                  setConfirmOpen(false);
-                  await submitOrder();
-                }}
-                className="flex-1 py-3 rounded-full bg-[#25D366] text-white"
+                onClick={submitOrder}
+                className="flex-1 bg-green-500 text-white p-3 rounded"
               >
                 Confirmar
               </button>
