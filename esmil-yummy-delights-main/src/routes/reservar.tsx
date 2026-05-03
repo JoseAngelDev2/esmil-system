@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, X } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Layout } from "@/components/Layout";
@@ -37,6 +37,19 @@ function getNow() {
   };
 }
 
+/* ── Label grande para personas mayores ── */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-lg font-semibold text-foreground">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls =
+  "w-full border-2 border-border rounded-2xl px-4 py-4 text-lg bg-background focus:border-primary focus:outline-none transition-colors";
+
 function Reservar() {
   const { items, setQuantity, remove, clear, totalPrice } = useCart();
 
@@ -48,20 +61,28 @@ function Reservar() {
     notes: "",
   });
 
+  const [formOpen, setFormOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const submitOrder = async () => {
+  const handleOpenForm = () => {
     if (items.length === 0) {
       toast.error("Tu carrito está vacío");
       return;
     }
+    setFormOpen(true);
+  };
 
+  const handleFormSubmit = () => {
     const result = formSchema.safeParse(form);
     if (!result.success) {
       toast.error(result.error.issues[0].message);
       return;
     }
+    setFormOpen(false);
+    setConfirmOpen(true);
+  };
 
+  const submitOrder = async () => {
     const { date, hora } = getNow();
 
     const msg = [
@@ -108,7 +129,7 @@ function Reservar() {
       });
       toast.success("Pedido registrado en el dashboard");
     } catch {
-      toast.warning("No se pudo registrar en el dashboard, pero puedes enviarlo por WhatsApp");
+      toast.warning("No se pudo registrar, pero puedes enviarlo por WhatsApp");
     }
 
     clear();
@@ -122,6 +143,7 @@ function Reservar() {
 
   return (
     <Layout>
+      {/* Banner */}
       <section className="bg-gradient-warm py-12">
         <div className="container mx-auto px-4 text-center text-primary-foreground">
           <h1 className="font-display text-4xl md:text-5xl font-bold">
@@ -133,11 +155,9 @@ function Reservar() {
         </div>
       </section>
 
-      {/* Espacio extra abajo para que la barra fija no tape contenido */}
-      <section className="container mx-auto px-4 py-10 pb-32 grid lg:grid-cols-3 gap-8">
-
-        {/* Carrito */}
-        <div className="lg:col-span-2 bg-card rounded-3xl shadow-soft p-6">
+      {/* Carrito — pb-32 para que la barra no tape el contenido */}
+      <section className="container mx-auto px-4 py-10 pb-32 max-w-2xl">
+        <div className="bg-card rounded-3xl shadow-soft p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-2xl font-bold">Tu carrito</h2>
             {items.length > 0 && (
@@ -159,6 +179,7 @@ function Reservar() {
             <ul className="divide-y divide-border">
               {items.map((item) => (
                 <li key={item.id} className="py-4 flex items-center gap-3">
+                  {/* Imagen o emoji */}
                   <div className="size-14 rounded-xl bg-gradient-warm flex items-center justify-center text-3xl shrink-0 overflow-hidden">
                     {item.image ? (
                       <img
@@ -218,78 +239,10 @@ function Reservar() {
             </div>
           )}
         </div>
-
-        {/* Formulario */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setConfirmOpen(true);
-          }}
-          className="bg-card rounded-3xl shadow-soft p-6 space-y-4 h-fit lg:sticky lg:top-20"
-        >
-          <h2 className="font-display text-2xl font-bold">Tus datos</h2>
-
-          <input
-            type="text"
-            required
-            placeholder="Nombre"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full p-3 rounded-xl border text-base"
-          />
-
-          <input
-            type="tel"
-            required
-            placeholder="Teléfono"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full p-3 rounded-xl border text-base"
-          />
-
-          <AddressPicker
-            value={form.address}
-            onChange={(address) => setForm({ ...form, address })}
-          />
-
-          {/* Modo entrega/recogida */}
-          <div className="grid grid-cols-2 gap-2">
-            {(["entrega", "recogida"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setForm({ ...form, mode: m })}
-                className={`py-3 rounded-xl text-base font-semibold border-2 transition-all ${
-                  form.mode === m
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-secondary text-secondary-foreground"
-                }`}
-              >
-                {m === "entrega" ? "🚚 Entrega" : "🏪 Recogida"}
-              </button>
-            ))}
-          </div>
-
-          <textarea
-            placeholder="Notas (opcional)"
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            rows={3}
-            className="w-full p-3 rounded-xl border text-base resize-none"
-          />
-
-          {/* Botón dentro del form — visible en desktop */}
-          <button
-            type="submit"
-            className="hidden lg:flex w-full items-center justify-center gap-2 bg-[#25D366] text-white py-3 rounded-full font-bold text-base"
-          >
-            Confirmar por WhatsApp 💬
-          </button>
-        </form>
       </section>
 
-      {/* ── BARRA FIJA INFERIOR (tipo navbar) — siempre visible en móvil ── */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-4 lg:hidden">
+      {/* ── BARRA FIJA INFERIOR ── */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-4">
         <div className="flex-1">
           <p className="text-xs text-muted-foreground leading-none mb-0.5">Total</p>
           <p className="font-display text-xl font-bold text-primary">
@@ -297,52 +250,135 @@ function Reservar() {
           </p>
         </div>
         <button
-          onClick={() => {
-            const result = formSchema.safeParse(form);
-            if (items.length === 0) {
-              toast.error("Tu carrito está vacío");
-              return;
-            }
-            if (!result.success) {
-              toast.error(result.error.issues[0].message);
-              return;
-            }
-            setConfirmOpen(true);
-          }}
+          onClick={handleOpenForm}
           className="flex items-center gap-2 bg-[#25D366] text-white px-6 py-3 rounded-full font-bold text-base active:scale-95 transition-transform"
         >
           Confirmar 💬
         </button>
       </div>
 
-      {/* Modal de confirmación */}
+      {/* ── SHEET / MODAL DEL FORMULARIO ── */}
+      {formOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
+          <div className="w-full max-w-lg bg-card rounded-t-3xl p-6 max-h-[90dvh] overflow-y-auto">
+
+            {/* Cabecera del sheet */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-2xl font-bold">Tus datos</h2>
+              <button
+                onClick={() => setFormOpen(false)}
+                className="size-10 rounded-full bg-secondary flex items-center justify-center hover:bg-accent"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <Field label="👤 Tu nombre">
+                <input
+                  type="text"
+                  placeholder="Ej: María González"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className={inputCls}
+                  autoComplete="name"
+                />
+              </Field>
+
+              <Field label="📞 Tu teléfono">
+                <input
+                  type="tel"
+                  placeholder="Ej: 809-555-1234"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className={inputCls}
+                  autoComplete="tel"
+                />
+              </Field>
+
+              <Field label="📍 Dirección de entrega">
+                <AddressPicker
+                  value={form.address}
+                  onChange={(address) => setForm({ ...form, address })}
+                />
+              </Field>
+
+              <Field label="🚚 ¿Cómo recibirás tu pedido?">
+                <div className="grid grid-cols-2 gap-3">
+                  {(["entrega", "recogida"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setForm({ ...form, mode: m })}
+                      className={`py-4 rounded-2xl text-lg font-bold border-2 transition-all active:scale-95 ${
+                        form.mode === m
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-secondary text-secondary-foreground"
+                      }`}
+                    >
+                      {m === "entrega" ? "🚚 Entrega" : "🏪 Recogida"}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="📝 Notas (opcional)">
+                <textarea
+                  placeholder="Alergias, instrucciones especiales..."
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  rows={3}
+                  className={`${inputCls} resize-none`}
+                />
+              </Field>
+
+              {/* Botón enviar */}
+              <button
+                type="button"
+                onClick={handleFormSubmit}
+                className="w-full bg-[#25D366] text-white text-xl font-bold py-5 rounded-2xl active:scale-95 transition-transform mt-2"
+              >
+                Revisar pedido 💬
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL DE CONFIRMACIÓN FINAL ── */}
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
           <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6">
-            <h3 className="text-lg font-bold text-center mb-2">
-              Confirmar pedido
+            <h3 className="text-xl font-bold text-center mb-2">
+              ¿Todo está correcto?
             </h3>
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              ¿Estás seguro de realizar esta reserva?
+            <p className="text-base text-muted-foreground text-center mb-1">
+              {form.name} · {form.phone}
             </p>
-            <p className="text-center font-bold text-xl mb-4">
+            <p className="text-base text-muted-foreground text-center mb-4">
+              {form.mode === "entrega" ? "🚚 Entrega" : "🏪 Recogida"} · {form.address}
+            </p>
+            <p className="text-center font-display font-bold text-2xl text-primary mb-6">
               RD${totalPrice().toFixed(2)}
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => setConfirmOpen(false)}
-                className="flex-1 py-3 rounded-full bg-secondary font-semibold"
+                onClick={() => {
+                  setConfirmOpen(false);
+                  setFormOpen(true);
+                }}
+                className="flex-1 py-4 rounded-full bg-secondary font-semibold text-base"
               >
-                Cancelar
+                ✏️ Editar
               </button>
               <button
                 onClick={async () => {
                   setConfirmOpen(false);
                   await submitOrder();
                 }}
-                className="flex-1 py-3 rounded-full bg-[#25D366] text-white font-bold"
+                className="flex-[2] py-4 rounded-full bg-[#25D366] text-white font-bold text-base"
               >
-                Confirmar
+                Enviar por WhatsApp 💬
               </button>
             </div>
           </div>
