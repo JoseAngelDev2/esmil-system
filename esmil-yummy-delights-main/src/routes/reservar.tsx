@@ -15,7 +15,7 @@ export const Route = createFileRoute("/reservar")({
       {
         name: "description",
         content:
-          "Confirma tu pedido por WhatsApp. Elige fecha y hora de entrega o recogida.",
+          "Confirma tu pedido por WhatsApp. Elige fecha de entrega o recogida.",
       },
     ],
   }),
@@ -27,7 +27,6 @@ const formSchema = z.object({
   phone: z.string().trim().min(7, "Teléfono inválido").max(20),
   address: z.string().trim().min(5, "Dirección requerida").max(200),
   date: z.string().min(1, "Selecciona una fecha"),
-  time: z.string().min(1, "Selecciona una hora"),
   mode: z.enum(["entrega", "recogida"]),
   notes: z.string().max(300).optional(),
 });
@@ -40,7 +39,6 @@ function Reservar() {
     phone: "",
     address: "",
     date: "",
-    time: "",
     mode: "entrega" as "entrega" | "recogida",
     notes: "",
   });
@@ -76,7 +74,6 @@ function Reservar() {
       `📍 Dirección: ${form.address}`,
       `🚚 Modalidad: ${form.mode}`,
       `📅 Fecha: ${form.date}`,
-      `⏰ Hora: ${form.time}`,
       ...(form.notes ? [`📝 Notas: ${form.notes}`] : []),
     ].join("\n");
 
@@ -89,7 +86,6 @@ function Reservar() {
           cantidad: item.quantity,
         })),
         fecha: form.date,
-        hora: form.time,
         notas: [
           `Direccion: ${form.address}`,
           `Modalidad: ${form.mode}`,
@@ -172,7 +168,7 @@ function Reservar() {
                       onClick={() =>
                         setQuantity(item.id, item.quantity - 1)
                       }
-                      className="size-7 rounded-full bg-background flex items-center justify-center"
+                      className="size-7 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
                     >
                       <Minus className="size-3" />
                     </button>
@@ -185,7 +181,7 @@ function Reservar() {
                       onClick={() =>
                         setQuantity(item.id, item.quantity + 1)
                       }
-                      className="size-7 rounded-full bg-background flex items-center justify-center"
+                      className="size-7 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
                     >
                       <Plus className="size-3" />
                     </button>
@@ -207,7 +203,7 @@ function Reservar() {
           )}
 
           {items.length > 0 && (
-            <div className="border-t border-border mt-4 pt-4 flex justify-between">
+            <div className="border-t border-border mt-4 pt-4 flex items-center justify-between">
               <span className="font-display text-lg">Total</span>
               <span className="font-display text-2xl font-bold text-primary">
                 RD${totalPrice().toFixed(2)}
@@ -226,54 +222,64 @@ function Reservar() {
         >
           <h2 className="font-display text-2xl font-bold">Tus datos</h2>
 
-          <input
-            type="text"
-            required
-            placeholder="Nombre"
-            value={form.name}
-            onChange={(e) =>
-              setForm({ ...form, name: e.target.value })
-            }
-            className="w-full p-3 rounded-xl border"
-          />
+          <div>
+            <label className="text-sm font-semibold">Nombre completo</label>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5"
+              placeholder="María Pérez"
+            />
+          </div>
 
-          <input
-            type="tel"
-            required
-            placeholder="Teléfono"
-            value={form.phone}
-            onChange={(e) =>
-              setForm({ ...form, phone: e.target.value })
-            }
-            className="w-full p-3 rounded-xl border"
-          />
+          <div>
+            <label className="text-sm font-semibold">Teléfono</label>
+            <input
+              type="tel"
+              required
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5"
+              placeholder="809-000-0000"
+            />
+          </div>
 
-          <AddressPicker
-            value={form.address}
-            onChange={(address) =>
-              setForm({ ...form, address })
-            }
-          />
+          <div>
+            <label className="text-sm font-semibold">Dirección</label>
+            <div className="mt-1">
+              <AddressPicker
+                value={form.address}
+                onChange={(address: string) =>
+                  setForm({ ...form, address })
+                }
+              />
+            </div>
+          </div>
 
-          <input
-            type="date"
-            required
-            value={form.date}
-            onChange={(e) =>
-              setForm({ ...form, date: e.target.value })
-            }
-            className="w-full p-3 rounded-xl border"
-          />
+          <div>
+            <label className="text-sm font-semibold">Fecha</label>
+            <input
+              type="date"
+              required
+              value={form.date}
+              min={new Date().toISOString().split("T")[0]}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5"
+            />
+          </div>
 
-          <input
-            type="time"
-            required
-            value={form.time}
-            onChange={(e) =>
-              setForm({ ...form, time: e.target.value })
-            }
-            className="w-full p-3 rounded-xl border"
-          />
+          <div>
+            <label className="text-sm font-semibold">Notas (opcional)</label>
+            <textarea
+              rows={2}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5 resize-none"
+              placeholder="Referencia, instrucciones..."
+            />
+          </div>
 
           <button className="w-full bg-[#25D366] text-white py-3 rounded-full font-bold">
             Confirmar por WhatsApp
@@ -281,7 +287,7 @@ function Reservar() {
         </form>
       </section>
 
-      {/* MODAL */}
+      {/* Modal */}
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
           <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6">
