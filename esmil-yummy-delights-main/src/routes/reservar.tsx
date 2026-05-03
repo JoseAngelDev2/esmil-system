@@ -26,7 +26,6 @@ const formSchema = z.object({
   phone: z.string().trim().min(7, "Teléfono inválido").max(20),
   address: z.string().trim().min(5, "Dirección requerida").max(200),
   date: z.string().min(1, "Selecciona una fecha"),
-  time: z.string().min(1, "Selecciona una hora"),
   mode: z.enum(["entrega", "recogida"]),
   notes: z.string().max(300).optional(),
 });
@@ -79,8 +78,8 @@ function Reservar() {
     name: "",
     phone: "",
     address: "",
-    date: "",
-    time: "",
+    date: new Date().toISOString().split("T")[0],
+    time: new Date().toLocaleTimeString("es-DO", { hour: "2-digit", minute: "2-digit" }),
     mode: "entrega" as "entrega" | "recogida",
     notes: "",
   });
@@ -121,6 +120,11 @@ function Reservar() {
       ...(form.notes ? [`📝 Notas: ${form.notes}`] : []),
     ].join("\n");
 
+    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(msg)}`;
+
+    // Safari fix: open window synchronously BEFORE any await
+    const waWindow = window.open("", "_blank");
+
     try {
       await createOrder({
         cliente: form.name,
@@ -148,8 +152,11 @@ function Reservar() {
 
     clear();
 
-    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    if (waWindow) {
+      waWindow.location.href = url;
+    } else {
+      window.location.href = url;
+    }
   };
 
   /* ── Step labels ── */
@@ -310,25 +317,6 @@ function Reservar() {
               </div>
             </Field>
 
-            <Field label="Fecha del pedido">
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className={inputCls}
-                min={new Date().toISOString().split("T")[0]}
-              />
-            </Field>
-
-            <Field label="Hora de entrega">
-              <input
-                type="time"
-                value={form.time}
-                onChange={(e) => setForm({ ...form, time: e.target.value })}
-                className={inputCls}
-              />
-            </Field>
-
             <Field label="Notas (opcional)">
               <textarea
                 placeholder="Alergias, instrucciones especiales..."
@@ -406,8 +394,6 @@ function Reservar() {
                 { icon: "📞", val: form.phone },
                 { icon: "📍", val: form.address },
                 { icon: "🚚", val: form.mode === "entrega" ? "Entrega a domicilio" : "Recogida en local" },
-                { icon: "📅", val: form.date },
-                { icon: "⏰", val: form.time },
                 ...(form.notes ? [{ icon: "📝", val: form.notes }] : []),
               ].map(({ icon, val }) => (
                 <div key={icon} className="flex gap-3 items-start">
