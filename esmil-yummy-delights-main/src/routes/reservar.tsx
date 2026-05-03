@@ -8,22 +8,21 @@ import { useCart, BUSINESS } from "@/store/cart";
 import { AddressPicker } from "@/components/AddressPicker";
 import { createOrder } from "@/services/catalog";
 
-// Emojis como constantes Unicode para evitar problemas de encoding
+// Emojis como constantes Unicode — máxima compatibilidad cross-browser/OS
 const E = {
-  person:   String.fromCodePoint(0x1F464),
-  phone:    String.fromCodePoint(0x1F4DE),
-  pin:      String.fromCodePoint(0x1F4CD),
-  truck:    String.fromCodePoint(0x1F69A),
-  store:    String.fromCodePoint(0x1F3EA),
-  notes:    String.fromCodePoint(0x1F4DD),
-  chat:     String.fromCodePoint(0x1F4AC),
-  pencil:   String.fromCodePoint(0x270F),
-  cart:     String.fromCodePoint(0x1F6D2),
-  candy:    String.fromCodePoint(0x1F36D),
-  clock:    String.fromCodePoint(0x23F0),
-  calendar: String.fromCodePoint(0x1F4C5),
+  person:   "\u{1F464}",
+  phone:    "\u{1F4DE}",
+  pin:      "\u{1F4CD}",
+  truck:    "\u{1F69A}",
+  store:    "\u{1F3EA}",
+  notes:    "\u{1F4DD}",
+  chat:     "\u{1F4AC}",
+  pencil:   "\u{270F}\uFE0F",
+  cart:     "\u{1F6D2}",
+  candy:    "\u{1F36D}",
+  clock:    "\u{23F0}",
+  calendar: "\u{1F4C5}",
 };
-
 
 export const Route = createFileRoute("/reservar")({
   head: () => ({
@@ -54,7 +53,6 @@ function getNow() {
   };
 }
 
-/* ── Label grande para personas mayores ── */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
@@ -69,6 +67,8 @@ const inputCls =
 
 function Reservar() {
   const { items, setQuantity, remove, clear, totalPrice } = useCart();
+
+  // La persistencia ya la maneja Zustand persist (clave "esmildelicias-cart")
 
   const [form, setForm] = useState({
     name: "",
@@ -99,6 +99,21 @@ function Reservar() {
     setConfirmOpen(true);
   };
 
+  // ── MEJORA 3: Respetar cantidad mínima al decrementar ──
+  // Si el item tiene minQty definido, no dejamos bajar de ese valor (se elimina si baja del mínimo).
+  const handleDecrement = (id: string, currentQty: number, minQty = 1) => {
+    const next = currentQty - 1;
+    if (next < minQty || next <= 0) {
+      remove(id);
+    } else {
+      setQuantity(id, next);
+    }
+  };
+
+  const handleIncrement = (id: string, currentQty: number) => {
+    setQuantity(id, currentQty + 1);
+  };
+
   const submitOrder = async () => {
     const { date, hora } = getNow();
 
@@ -121,10 +136,14 @@ function Reservar() {
     ].join("\n");
 
     const cleanMsg = msg.normalize("NFC");
-    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURI(cleanMsg)}`;
+    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(cleanMsg)}`;
 
-    // FIX SAFARI: abrir ventana antes del await
-    const whatsappWindow = window.open("", "_blank", "noopener,noreferrer");
+    let whatsappWindow: Window | null = null;
+    try {
+      whatsappWindow = window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      // popup bloqueado
+    }
 
     try {
       await createOrder({
@@ -150,8 +169,9 @@ function Reservar() {
     }
 
     clear();
+    // Zustand persist limpia automáticamente al hacer clear()
 
-    if (whatsappWindow) {
+    if (whatsappWindow && !whatsappWindow.closed) {
       whatsappWindow.location.href = url;
     } else {
       window.location.href = url;
@@ -172,7 +192,7 @@ function Reservar() {
         </div>
       </section>
 
-      {/* Carrito — pb-32 para que la barra no tape el contenido */}
+      {/* Carrito */}
       <section className="container mx-auto px-4 py-10 pb-32 max-w-2xl">
         <div className="bg-card rounded-3xl shadow-soft p-6">
           <div className="flex items-center justify-between mb-4">
@@ -189,14 +209,13 @@ function Reservar() {
 
           {items.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p className="text-5xl mb-3">${E.cart}</p>
+              <p className="text-5xl mb-3">{E.cart}</p>
               <p>Aún no tienes productos. Visita el catálogo.</p>
             </div>
           ) : (
             <ul className="divide-y divide-border">
               {items.map((item) => (
                 <li key={item.id} className="py-4 flex items-center gap-3">
-                  {/* Imagen o emoji */}
                   <div className="size-14 rounded-xl bg-gradient-warm flex items-center justify-center text-3xl shrink-0 overflow-hidden">
                     {item.image ? (
                       <img
@@ -212,12 +231,21 @@ function Reservar() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{item.name}</p>
                     <p className="text-sm text-muted-foreground">RD${item.price}</p>
+                    {/* MEJORA 3: Badge visible si hay cantidad mínima */}
+                    {item.minQty && item.minQty > 1 && (
+                      <p className="text-xs text-amber-600 font-medium mt-0.5">
+                        Mín. {item.minQty} unidades
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1 bg-secondary rounded-full p-1">
                     <button
-                      onClick={() => setQuantity(item.id, item.quantity - 1)}
-                      className="size-8 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => handleDecrement(item.id, item.quantity, item.minQty)}
+                      // Desactivamos si ya estamos en el mínimo (no en 1, sino en minQty)
+                      disabled={item.minQty ? item.quantity <= item.minQty : false}
+                      className="size-8 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                      aria-label="Reducir cantidad"
                     >
                       <Minus className="size-3" />
                     </button>
@@ -225,8 +253,9 @@ function Reservar() {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => setQuantity(item.id, item.quantity + 1)}
+                      onClick={() => handleIncrement(item.id, item.quantity)}
                       className="size-8 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
+                      aria-label="Aumentar cantidad"
                     >
                       <Plus className="size-3" />
                     </button>
@@ -239,6 +268,7 @@ function Reservar() {
                   <button
                     onClick={() => remove(item.id)}
                     className="text-muted-foreground hover:text-destructive p-1"
+                    aria-label="Eliminar producto"
                   >
                     <Trash2 className="size-4" />
                   </button>
@@ -270,7 +300,7 @@ function Reservar() {
           onClick={handleOpenForm}
           className="flex items-center gap-2 bg-[#25D366] text-white px-6 py-3 rounded-full font-bold text-base active:scale-95 transition-transform"
         >
-          Confirmar ${E.chat}
+          Confirmar {E.chat}
         </button>
       </div>
 
@@ -278,8 +308,6 @@ function Reservar() {
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
           <div className="w-full max-w-lg bg-card rounded-t-3xl p-6 max-h-[90dvh] overflow-y-auto">
-
-            {/* Cabecera del sheet */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display text-2xl font-bold">Tus datos</h2>
               <button
@@ -291,7 +319,7 @@ function Reservar() {
             </div>
 
             <div className="space-y-5">
-              <Field label={`$${E.person} Tu nombre`}>
+              <Field label={`${E.person} Tu nombre`}>
                 <input
                   type="text"
                   placeholder="Ej: María González"
@@ -302,7 +330,7 @@ function Reservar() {
                 />
               </Field>
 
-              <Field label={`$${E.phone} Tu teléfono`}>
+              <Field label={`${E.phone} Tu teléfono`}>
                 <input
                   type="tel"
                   placeholder="Ej: 809-555-1234"
@@ -313,14 +341,14 @@ function Reservar() {
                 />
               </Field>
 
-              <Field label={`$${E.pin} Dirección de entrega`}>
+              <Field label={`${E.pin} Dirección de entrega`}>
                 <AddressPicker
                   value={form.address}
                   onChange={(address) => setForm({ ...form, address })}
                 />
               </Field>
 
-              <Field label={`$${E.truck} ¿Cómo recibirás tu pedido?`}>
+              <Field label={`${E.truck} ¿Cómo recibirás tu pedido?`}>
                 <div className="grid grid-cols-2 gap-3">
                   {(["entrega", "recogida"] as const).map((m) => (
                     <button
@@ -333,13 +361,13 @@ function Reservar() {
                           : "border-border bg-secondary text-secondary-foreground"
                       }`}
                     >
-                      {m === "entrega" ? "${E.truck} Entrega" : "${E.store} Recogida"}
+                      {m === "entrega" ? `${E.truck} Entrega` : `${E.store} Recogida`}
                     </button>
                   ))}
                 </div>
               </Field>
 
-              <Field label={`$${E.notes} Notas (opcional)`}>
+              <Field label={`${E.notes} Notas (opcional)`}>
                 <textarea
                   placeholder="Alergias, instrucciones especiales..."
                   value={form.notes}
@@ -349,7 +377,6 @@ function Reservar() {
                 />
               </Field>
 
-              {/* Botón enviar */}
               <button
                 type="button"
                 onClick={handleFormSubmit}
@@ -365,7 +392,7 @@ function Reservar() {
       {/* ── MODAL DE CONFIRMACIÓN FINAL ── */}
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-          <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6">
+          <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6 max-h-[90dvh] overflow-y-auto">
             <h3 className="text-xl font-bold text-center mb-2">
               ¿Todo está correcto?
             </h3>
@@ -375,9 +402,43 @@ function Reservar() {
             <p className="text-base text-muted-foreground text-center mb-4">
               {form.mode === "entrega" ? `${E.truck} Entrega` : `${E.store} Recogida`} · {form.address}
             </p>
-            <p className="text-center font-display font-bold text-2xl text-primary mb-6">
-              RD${totalPrice().toFixed(2)}
-            </p>
+
+            {/* ── MEJORA 1: Resumen completo de productos en el modal ── */}
+            <div className="bg-secondary rounded-2xl p-4 mb-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Tu pedido
+              </p>
+              <ul className="space-y-2">
+                {items.map((item) => (
+                  <li key={item.id} className="flex items-center gap-3">
+                    <div className="size-9 rounded-lg bg-gradient-warm flex items-center justify-center text-lg shrink-0 overflow-hidden">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        item.emoji
+                      )}
+                    </div>
+                    <span className="flex-1 text-sm font-medium truncate">
+                      {item.quantity}x {item.name}
+                    </span>
+                    <span className="text-sm font-bold text-primary shrink-0">
+                      RD${(item.price * item.quantity).toFixed(0)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-border mt-3 pt-3 flex justify-between items-center">
+                <span className="text-sm font-semibold">Total</span>
+                <span className="font-display font-bold text-xl text-primary">
+                  RD${totalPrice().toFixed(2)}
+                </span>
+              </div>
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={() => {
