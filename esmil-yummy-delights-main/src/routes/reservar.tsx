@@ -8,6 +8,23 @@ import { useCart, BUSINESS } from "@/store/cart";
 import { AddressPicker } from "@/components/AddressPicker";
 import { createOrder } from "@/services/catalog";
 
+// Emojis como constantes Unicode para evitar problemas de encoding
+const E = {
+  person:   String.fromCodePoint(0x1F464),
+  phone:    String.fromCodePoint(0x1F4DE),
+  pin:      String.fromCodePoint(0x1F4CD),
+  truck:    String.fromCodePoint(0x1F69A),
+  store:    String.fromCodePoint(0x1F3EA),
+  notes:    String.fromCodePoint(0x1F4DD),
+  chat:     String.fromCodePoint(0x1F4AC),
+  pencil:   String.fromCodePoint(0x270F),
+  cart:     String.fromCodePoint(0x1F6D2),
+  candy:    String.fromCodePoint(0x1F36D),
+  clock:    String.fromCodePoint(0x23F0),
+  calendar: String.fromCodePoint(0x1F4C5),
+};
+
+
 export const Route = createFileRoute("/reservar")({
   head: () => ({
     meta: [
@@ -86,7 +103,7 @@ function Reservar() {
     const { date, hora } = getNow();
 
     const msg = [
-      `¡Hola ${BUSINESS.name}! 🍭 Quiero reservar este pedido:`,
+      `¡Hola ${BUSINESS.name}! ${E.candy} Quiero reservar este pedido:`,
       ``,
       ...items.map(
         (i) => `• ${i.quantity}x ${i.name} — RD$${(i.price * i.quantity).toFixed(2)}`
@@ -94,19 +111,19 @@ function Reservar() {
       ``,
       `*Total: RD$${totalPrice().toFixed(2)}*`,
       ``,
-      `👤 Nombre: ${form.name}`,
-      `📞 Teléfono: ${form.phone}`,
-      `📍 Dirección: ${form.address}`,
-      `🚚 Modalidad: ${form.mode}`,
-      `📅 Fecha: ${date}`,
-      `⏰ Hora: ${hora}`,
-      ...(form.notes ? [`📝 Notas: ${form.notes}`] : []),
+      `${E.person} Nombre: ${form.name}`,
+      `${E.phone} Teléfono: ${form.phone}`,
+      `${E.pin} Dirección: ${form.address}`,
+      `${E.truck} Modalidad: ${form.mode}`,
+      `${E.calendar} Fecha: ${date}`,
+      `${E.clock} Hora: ${hora}`,
+      ...(form.notes ? [`${E.notes} Notas: ${form.notes}`] : []),
     ].join("\n");
 
     const cleanMsg = msg.normalize("NFC");
     const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURI(cleanMsg)}`;
 
-    // 🔥 FIX SAFARI: abrir ventana antes del await
+    // FIX SAFARI: abrir ventana antes del await
     const whatsappWindow = window.open("", "_blank", "noopener,noreferrer");
 
     try {
@@ -172,7 +189,7 @@ function Reservar() {
 
           {items.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p className="text-5xl mb-3">🛒</p>
+              <p className="text-5xl mb-3">${E.cart}</p>
               <p>Aún no tienes productos. Visita el catálogo.</p>
             </div>
           ) : (
@@ -253,7 +270,7 @@ function Reservar() {
           onClick={handleOpenForm}
           className="flex items-center gap-2 bg-[#25D366] text-white px-6 py-3 rounded-full font-bold text-base active:scale-95 transition-transform"
         >
-          Confirmar 💬
+          Confirmar ${E.chat}
         </button>
       </div>
 
@@ -274,7 +291,7 @@ function Reservar() {
             </div>
 
             <div className="space-y-5">
-              <Field label="👤 Tu nombre">
+              <Field label={`$${E.person} Tu nombre`}>
                 <input
                   type="text"
                   placeholder="Ej: María González"
@@ -285,7 +302,7 @@ function Reservar() {
                 />
               </Field>
 
-              <Field label="📞 Tu teléfono">
+              <Field label={`$${E.phone} Tu teléfono`}>
                 <input
                   type="tel"
                   placeholder="Ej: 809-555-1234"
@@ -296,14 +313,14 @@ function Reservar() {
                 />
               </Field>
 
-              <Field label="📍 Dirección de entrega">
+              <Field label={`$${E.pin} Dirección de entrega`}>
                 <AddressPicker
                   value={form.address}
                   onChange={(address) => setForm({ ...form, address })}
                 />
               </Field>
 
-              <Field label="🚚 ¿Cómo recibirás tu pedido?">
+              <Field label={`$${E.truck} ¿Cómo recibirás tu pedido?`}>
                 <div className="grid grid-cols-2 gap-3">
                   {(["entrega", "recogida"] as const).map((m) => (
                     <button
@@ -316,13 +333,13 @@ function Reservar() {
                           : "border-border bg-secondary text-secondary-foreground"
                       }`}
                     >
-                      {m === "entrega" ? "🚚 Entrega" : "🏪 Recogida"}
+                      {m === "entrega" ? "${E.truck} Entrega" : "${E.store} Recogida"}
                     </button>
                   ))}
                 </div>
               </Field>
 
-              <Field label="📝 Notas (opcional)">
+              <Field label={`$${E.notes} Notas (opcional)`}>
                 <textarea
                   placeholder="Alergias, instrucciones especiales..."
                   value={form.notes}
@@ -338,7 +355,7 @@ function Reservar() {
                 onClick={handleFormSubmit}
                 className="w-full bg-[#25D366] text-white text-xl font-bold py-5 rounded-2xl active:scale-95 transition-transform mt-2"
               >
-                Revisar pedido 💬
+                Revisar pedido {E.chat}
               </button>
             </div>
           </div>
@@ -356,7 +373,7 @@ function Reservar() {
               {form.name} · {form.phone}
             </p>
             <p className="text-base text-muted-foreground text-center mb-4">
-              {form.mode === "entrega" ? "🚚 Entrega" : "🏪 Recogida"} · {form.address}
+              {form.mode === "entrega" ? `${E.truck} Entrega` : `${E.store} Recogida`} · {form.address}
             </p>
             <p className="text-center font-display font-bold text-2xl text-primary mb-6">
               RD${totalPrice().toFixed(2)}
@@ -369,7 +386,7 @@ function Reservar() {
                 }}
                 className="flex-1 py-4 rounded-full bg-secondary font-semibold text-base"
               >
-                ✏️ Editar
+                {E.pencil} Editar
               </button>
               <button
                 onClick={async () => {
@@ -378,7 +395,7 @@ function Reservar() {
                 }}
                 className="flex-[2] py-4 rounded-full bg-[#25D366] text-white font-bold text-base"
               >
-                Enviar por WhatsApp 💬
+                Enviar por WhatsApp {E.chat}
               </button>
             </div>
           </div>
