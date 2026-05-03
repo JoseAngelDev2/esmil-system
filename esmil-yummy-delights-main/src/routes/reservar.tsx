@@ -77,12 +77,6 @@ function Reservar() {
       ...(form.notes ? [`📝 Notas: ${form.notes}`] : []),
     ].join("\n");
 
-    const cleanMsg = msg.normalize("NFC");
-    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURI(cleanMsg)}`;
-
-    // 🔥 FIX SAFARI: abrir ventana antes del await
-    const whatsappWindow = window.open("", "_blank", "noopener,noreferrer");
-
     try {
       await createOrder({
         cliente: form.name,
@@ -100,7 +94,6 @@ function Reservar() {
           .filter(Boolean)
           .join("\n"),
       });
-
       toast.success("Pedido registrado en el dashboard");
     } catch {
       toast.warning(
@@ -108,12 +101,10 @@ function Reservar() {
       );
     }
 
-    // 🔥 redirigir ventana abierta
-    if (whatsappWindow) {
-      whatsappWindow.location.href = url;
-    } else {
-      window.location.href = url;
-    }
+    const cleanMsg = msg.normalize("NFC");
+
+    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURI(cleanMsg)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -231,8 +222,64 @@ function Reservar() {
         >
           <h2 className="font-display text-2xl font-bold">Tus datos</h2>
 
-          {/* inputs igual que ya tienes */}
-          {/* ... */}
+          <div>
+            <label className="text-sm font-semibold">Nombre completo</label>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5"
+              placeholder="María Pérez"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold">Teléfono</label>
+            <input
+              type="tel"
+              required
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5"
+              placeholder="809-000-0000"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold">Dirección</label>
+            <div className="mt-1">
+              <AddressPicker
+                value={form.address}
+                onChange={(address: string) =>
+                  setForm({ ...form, address })
+                }
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold">Fecha</label>
+            <input
+              type="date"
+              required
+              value={form.date}
+              min={new Date().toISOString().split("T")[0]}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-3 py-2.5"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold">Notas (opcional)</label>
+            <textarea
+              rows={2}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-2.5 resize-none"
+              placeholder="Referencia, instrucciones..."
+            />
+          </div>
 
           <button className="w-full bg-[#25D366] text-white py-3 rounded-full font-bold">
             Confirmar por WhatsApp
