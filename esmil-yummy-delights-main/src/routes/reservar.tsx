@@ -86,14 +86,16 @@ function Reservar() {
 
     try {
       await createOrder({
-        cliente: form.name,
-        telefono: form.phone,
-        productos: items.map((item) => ({
-          producto: item.id,
-          cantidad: item.quantity,
-        })),
-        fecha: form.date,
-        notas: `Direccion: ${form.address}\nModalidad: ${form.mode}\n${form.notes || ""}`,
+  cliente: form.name,
+  telefono: form.phone,
+  productos: items.map((item) => ({
+    producto: item.id,
+    cantidad: item.quantity,
+  })),
+  fecha: form.date,
+  hora: "12:00", // 👈 FIX
+  notas: ...
+});
       });
 
       toast.success("Pedido registrado");
