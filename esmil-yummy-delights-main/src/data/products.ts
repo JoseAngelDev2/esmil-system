@@ -14,6 +14,8 @@ export interface Product {
   image?: string | null;
   description: string;
   stock?: number;
+  /** Cantidad mínima de compra. Si no se define, el mínimo es 1. */
+  minQty?: number;
 }
 
 export interface CategoryItem {
