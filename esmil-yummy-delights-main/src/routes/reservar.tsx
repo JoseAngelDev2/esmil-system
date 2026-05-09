@@ -5,7 +5,6 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Layout } from "@/components/Layout";
 import { useCart, BUSINESS } from "@/store/cart";
-import { AddressPicker } from "@/components/AddressPicker";
 import { createOrder } from "@/services/catalog";
 
 // Emojis como constantes Unicode — máxima compatibilidad cross-browser/OS
@@ -48,6 +47,7 @@ const formSchema = z.object({
 
 function getNow() {
   const now = new Date();
+
   return {
     date: now.toISOString().split("T")[0],
     hora: now.toLocaleTimeString("es-DO", {
@@ -102,6 +102,7 @@ function Reservar() {
       toast.error("Tu carrito está vacío");
       return;
     }
+
     setFormOpen(true);
   };
 
@@ -349,7 +350,7 @@ function Reservar() {
         </div>
       </section>
 
-      {/* ── BARRA FIJA INFERIOR ── */}
+      {/* Barra inferior */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-4">
         <div className="flex-1">
           <p className="text-xs text-muted-foreground leading-none mb-0.5">
@@ -369,7 +370,7 @@ function Reservar() {
         </button>
       </div>
 
-      {/* ── SHEET / MODAL DEL FORMULARIO ── */}
+      {/* Modal formulario */}
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
           <div className="w-full max-w-lg bg-card rounded-t-3xl p-6 max-h-[90dvh] overflow-y-auto">
@@ -430,101 +431,103 @@ function Reservar() {
               </Field>
 
               <Field
-  label={`${E.pin} Dirección de entrega`}
-  htmlFor="address"
->
-  <div className="space-y-3">
-    <input
-      id="address"
-      name="address"
-      type="text"
-      placeholder="Ej: Av. España, Santo Domingo Este"
-      value={form.address}
-      onChange={(e) =>
-        setForm({
-          ...form,
-          address: e.target.value,
-        })
-      }
-      className={inputCls}
-      autoComplete="street-address"
-      list="address-suggestions"
-    />
+                label={`${E.pin} Dirección de entrega`}
+                htmlFor="address"
+              >
+                <div className="space-y-3">
+                  <input
+                    id="address"
+                    name="address"
+                    type="text"
+                    placeholder="Ej: Calle Duarte #12, Los Mina"
+                    value={form.address}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        address: e.target.value,
+                      })
+                    }
+                    className={inputCls}
+                    autoComplete="street-address"
+                    list="address-suggestions"
+                  />
 
-    {/* Autocomplete simple */}
-    <datalist id="address-suggestions">
-      <option value="Santo Domingo Este" />
-      <option value="Santo Domingo Norte" />
-      <option value="Santo Domingo Oeste" />
-      <option value="Los Mina" />
-      <option value="Ensanche Ozama" />
-      <option value="Alma Rosa" />
-      <option value="Villa Faro" />
-      <option value="Invivienda" />
-      <option value="San Isidro" />
-      <option value="Autopista Las Américas" />
-    </datalist>
+                  <datalist id="address-suggestions">
+                    <option value="Santo Domingo Este" />
+                    <option value="Los Mina" />
+                    <option value="San Isidro" />
+                    <option value="Alma Rosa" />
+                    <option value="Ensanche Ozama" />
+                    <option value="Invivienda" />
+                    <option value="Villa Faro" />
+                  </datalist>
 
-    {/* Botón ubicación actual */}
-    <button
-      type="button"
-      onClick={() => {
-        if (!navigator.geolocation) {
-          toast.error("Tu navegador no soporta ubicación");
-          return;
-        }
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!navigator.geolocation) {
+                        toast.error(
+                          "Tu navegador no soporta ubicación"
+                        );
+                        return;
+                      }
 
-        toast.loading("Obteniendo ubicación...", {
-          id: "location",
-        });
+                      toast.loading(
+                        "Obteniendo ubicación...",
+                        {
+                          id: "location",
+                        }
+                      );
 
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          const lat =
+                            position.coords.latitude;
 
-            try {
-              const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
-              );
+                          const lng =
+                            position.coords.longitude;
 
-              const data = await res.json();
+                          setForm({
+                            ...form,
+                            address: `Mi ubicación actual: https://maps.google.com/?q=${lat},${lng}`,
+                          });
 
-              const address =
-                data.display_name ||
-                `${latitude}, ${longitude}`;
+                          toast.success(
+                            "Ubicación agregada",
+                            {
+                              id: "location",
+                            }
+                          );
+                        },
+                        () => {
+                          toast.error(
+                            "No se pudo obtener la ubicación",
+                            {
+                              id: "location",
+                            }
+                          );
+                        }
+                      );
+                    }}
+                    className="w-full py-3 rounded-2xl border-2 border-border bg-secondary hover:bg-accent transition-colors font-semibold"
+                  >
+                    📍 Usar mi ubicación actual
+                  </button>
 
-              setForm({
-                ...form,
-                address,
-              });
-
-              toast.success("Ubicación obtenida", {
-                id: "location",
-              });
-            } catch {
-              toast.error("No se pudo obtener la dirección", {
-                id: "location",
-              });
-            }
-          },
-          () => {
-            toast.error("Debes permitir el acceso a ubicación", {
-              id: "location",
-            });
-          }
-        );
-      }}
-      className="w-full border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary rounded-2xl py-4 px-4 font-semibold transition-colors"
-    >
-      📍 Usar mi ubicación actual
-    </button>
-
-    {/* Referencia */}
-    <p className="text-sm text-muted-foreground">
-      Agrega una referencia para ayudarte a encontrar más rápido.
-    </p>
-  </div>
-</Field>
+                  <textarea
+                    placeholder="Referencia: casa azul, cerca del colmado..."
+                    value={form.notes}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        notes: e.target.value,
+                      })
+                    }
+                    rows={2}
+                    className={`${inputCls} resize-none`}
+                  />
+                </div>
+              </Field>
 
               <Field
                 label={`${E.truck} ¿Cómo recibirás tu pedido?`}
@@ -555,26 +558,6 @@ function Reservar() {
                 </div>
               </Field>
 
-              <Field
-                label={`${E.notes} Notas (opcional)`}
-                htmlFor="notes"
-              >
-                <textarea
-                  id="notes"
-                  name="notes"
-                  placeholder="Alergias, instrucciones especiales..."
-                  value={form.notes}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      notes: e.target.value,
-                    })
-                  }
-                  rows={3}
-                  className={`${inputCls} resize-none`}
-                />
-              </Field>
-
               <button
                 type="button"
                 onClick={handleFormSubmit}
@@ -587,7 +570,7 @@ function Reservar() {
         </div>
       )}
 
-      {/* ── MODAL DE CONFIRMACIÓN FINAL ── */}
+      {/* Modal confirmación */}
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
           <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-6 max-h-[90dvh] overflow-y-auto">
@@ -679,3 +662,5 @@ function Reservar() {
     </Layout>
   );
 }
+
+export default Reservar;
