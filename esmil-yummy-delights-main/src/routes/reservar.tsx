@@ -430,19 +430,101 @@ function Reservar() {
               </Field>
 
               <Field
-                label={`${E.pin} Dirección de entrega`}
-                htmlFor="address"
-              >
-                <AddressPicker
-                  value={form.address}
-                  onChange={(address) =>
-                    setForm({
-                      ...form,
-                      address,
-                    })
-                  }
-                />
-              </Field>
+  label={`${E.pin} Dirección de entrega`}
+  htmlFor="address"
+>
+  <div className="space-y-3">
+    <input
+      id="address"
+      name="address"
+      type="text"
+      placeholder="Ej: Av. España, Santo Domingo Este"
+      value={form.address}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          address: e.target.value,
+        })
+      }
+      className={inputCls}
+      autoComplete="street-address"
+      list="address-suggestions"
+    />
+
+    {/* Autocomplete simple */}
+    <datalist id="address-suggestions">
+      <option value="Santo Domingo Este" />
+      <option value="Santo Domingo Norte" />
+      <option value="Santo Domingo Oeste" />
+      <option value="Los Mina" />
+      <option value="Ensanche Ozama" />
+      <option value="Alma Rosa" />
+      <option value="Villa Faro" />
+      <option value="Invivienda" />
+      <option value="San Isidro" />
+      <option value="Autopista Las Américas" />
+    </datalist>
+
+    {/* Botón ubicación actual */}
+    <button
+      type="button"
+      onClick={() => {
+        if (!navigator.geolocation) {
+          toast.error("Tu navegador no soporta ubicación");
+          return;
+        }
+
+        toast.loading("Obteniendo ubicación...", {
+          id: "location",
+        });
+
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+
+            try {
+              const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+              );
+
+              const data = await res.json();
+
+              const address =
+                data.display_name ||
+                `${latitude}, ${longitude}`;
+
+              setForm({
+                ...form,
+                address,
+              });
+
+              toast.success("Ubicación obtenida", {
+                id: "location",
+              });
+            } catch {
+              toast.error("No se pudo obtener la dirección", {
+                id: "location",
+              });
+            }
+          },
+          () => {
+            toast.error("Debes permitir el acceso a ubicación", {
+              id: "location",
+            });
+          }
+        );
+      }}
+      className="w-full border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary rounded-2xl py-4 px-4 font-semibold transition-colors"
+    >
+      📍 Usar mi ubicación actual
+    </button>
+
+    {/* Referencia */}
+    <p className="text-sm text-muted-foreground">
+      Agrega una referencia para ayudarte a encontrar más rápido.
+    </p>
+  </div>
+</Field>
 
               <Field
                 label={`${E.truck} ¿Cómo recibirás tu pedido?`}
