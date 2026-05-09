@@ -10,17 +10,17 @@ import { createOrder } from "@/services/catalog";
 
 // Emojis como constantes Unicode — máxima compatibilidad cross-browser/OS
 const E = {
-  person:   "\u{1F464}",
-  phone:    "\u{1F4DE}",
-  pin:      "\u{1F4CD}",
-  truck:    "\u{1F69A}",
-  store:    "\u{1F3EA}",
-  notes:    "\u{1F4DD}",
-  chat:     "\u{1F4AC}",
-  pencil:   "\u{270F}\uFE0F",
-  cart:     "\u{1F6D2}",
-  candy:    "\u{1F36D}",
-  clock:    "\u{23F0}",
+  person: "\u{1F464}",
+  phone: "\u{1F4DE}",
+  pin: "\u{1F4CD}",
+  truck: "\u{1F69A}",
+  store: "\u{1F3EA}",
+  notes: "\u{1F4DD}",
+  chat: "\u{1F4AC}",
+  pencil: "\u{270F}\uFE0F",
+  cart: "\u{1F6D2}",
+  candy: "\u{1F36D}",
+  clock: "\u{23F0}",
   calendar: "\u{1F4C5}",
 };
 
@@ -30,7 +30,8 @@ export const Route = createFileRoute("/reservar")({
       { title: "Reservar pedido — EsmilDelicias" },
       {
         name: "description",
-        content: "Confirma tu pedido por WhatsApp. Elige fecha de entrega o recogida.",
+        content:
+          "Confirma tu pedido por WhatsApp. Elige fecha de entrega o recogida.",
       },
     ],
   }),
@@ -49,14 +50,31 @@ function getNow() {
   const now = new Date();
   return {
     date: now.toISOString().split("T")[0],
-    hora: now.toLocaleTimeString("es-DO", { hour: "2-digit", minute: "2-digit" }),
+    hora: now.toLocaleTimeString("es-DO", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
   };
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-lg font-semibold text-foreground">{label}</label>
+      <label
+        htmlFor={htmlFor}
+        className="text-lg font-semibold text-foreground"
+      >
+        {label}
+      </label>
+
       {children}
     </div>
   );
@@ -67,8 +85,6 @@ const inputCls =
 
 function Reservar() {
   const { items, setQuantity, remove, clear, totalPrice } = useCart();
-
-  // La persistencia ya la maneja Zustand persist (clave "esmildelicias-cart")
 
   const [form, setForm] = useState({
     name: "",
@@ -91,18 +107,23 @@ function Reservar() {
 
   const handleFormSubmit = () => {
     const result = formSchema.safeParse(form);
+
     if (!result.success) {
       toast.error(result.error.issues[0].message);
       return;
     }
+
     setFormOpen(false);
     setConfirmOpen(true);
   };
 
-  // ── MEJORA 3: Respetar cantidad mínima al decrementar ──
-  // Si el item tiene minQty definido, no dejamos bajar de ese valor (se elimina si baja del mínimo).
-  const handleDecrement = (id: string, currentQty: number, minQty = 1) => {
+  const handleDecrement = (
+    id: string,
+    currentQty: number,
+    minQty = 1
+  ) => {
     const next = currentQty - 1;
+
     if (next < minQty || next <= 0) {
       remove(id);
     } else {
@@ -121,7 +142,10 @@ function Reservar() {
       `¡Hola ${BUSINESS.name}! ${E.candy} Quiero reservar este pedido:`,
       ``,
       ...items.map(
-        (i) => `• ${i.quantity}x ${i.name} — RD$${(i.price * i.quantity).toFixed(2)}`
+        (i) =>
+          `• ${i.quantity}x ${i.name} — RD$${(
+            i.price * i.quantity
+          ).toFixed(2)}`
       ),
       ``,
       `*Total: RD$${totalPrice().toFixed(2)}*`,
@@ -136,11 +160,19 @@ function Reservar() {
     ].join("\n");
 
     const cleanMsg = msg.normalize("NFC");
-    const url = `https://wa.me/${BUSINESS.whatsapp}?text=${encodeURIComponent(cleanMsg)}`;
+
+    const url = `https://wa.me/${
+      BUSINESS.whatsapp
+    }?text=${encodeURIComponent(cleanMsg)}`;
 
     let whatsappWindow: Window | null = null;
+
     try {
-      whatsappWindow = window.open(url, "_blank", "noopener,noreferrer");
+      whatsappWindow = window.open(
+        url,
+        "_blank",
+        "noopener,noreferrer"
+      );
     } catch {
       // popup bloqueado
     }
@@ -163,13 +195,15 @@ function Reservar() {
           .filter(Boolean)
           .join("\n"),
       });
+
       toast.success("Pedido registrado en el dashboard");
     } catch {
-      toast.warning("No se pudo registrar, pero puedes enviarlo por WhatsApp");
+      toast.warning(
+        "No se pudo registrar, pero puedes enviarlo por WhatsApp"
+      );
     }
 
     clear();
-    // Zustand persist limpia automáticamente al hacer clear()
 
     if (whatsappWindow && !whatsappWindow.closed) {
       whatsappWindow.location.href = url;
@@ -186,6 +220,7 @@ function Reservar() {
           <h1 className="font-display text-4xl md:text-5xl font-bold">
             Reservar pedido
           </h1>
+
           <p className="mt-2 text-primary-foreground/90">
             Revisa tu carrito y completa tus datos
           </p>
@@ -196,7 +231,10 @@ function Reservar() {
       <section className="container mx-auto px-4 py-10 pb-32 max-w-2xl">
         <div className="bg-card rounded-3xl shadow-soft p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-2xl font-bold">Tu carrito</h2>
+            <h2 className="font-display text-2xl font-bold">
+              Tu carrito
+            </h2>
+
             {items.length > 0 && (
               <button
                 onClick={clear}
@@ -215,7 +253,10 @@ function Reservar() {
           ) : (
             <ul className="divide-y divide-border">
               {items.map((item) => (
-                <li key={item.id} className="py-4 flex items-center gap-3">
+                <li
+                  key={item.id}
+                  className="py-4 flex items-center gap-3"
+                >
                   <div className="size-14 rounded-xl bg-gradient-warm flex items-center justify-center text-3xl shrink-0 overflow-hidden">
                     {item.image ? (
                       <img
@@ -229,9 +270,14 @@ function Reservar() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">RD${item.price}</p>
-                    {/* MEJORA 3: Badge visible si hay cantidad mínima */}
+                    <p className="font-semibold truncate">
+                      {item.name}
+                    </p>
+
+                    <p className="text-sm text-muted-foreground">
+                      RD${item.price}
+                    </p>
+
                     {item.minQty && item.minQty > 1 && (
                       <p className="text-xs text-amber-600 font-medium mt-0.5">
                         Mín. {item.minQty} unidades
@@ -241,19 +287,32 @@ function Reservar() {
 
                   <div className="flex items-center gap-1 bg-secondary rounded-full p-1">
                     <button
-                      onClick={() => handleDecrement(item.id, item.quantity, item.minQty)}
-                      // Desactivamos si ya estamos en el mínimo (no en 1, sino en minQty)
-                      disabled={item.minQty ? item.quantity <= item.minQty : false}
+                      onClick={() =>
+                        handleDecrement(
+                          item.id,
+                          item.quantity,
+                          item.minQty
+                        )
+                      }
+                      disabled={
+                        item.minQty
+                          ? item.quantity <= item.minQty
+                          : false
+                      }
                       className="size-8 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:cursor-not-allowed"
                       aria-label="Reducir cantidad"
                     >
                       <Minus className="size-3" />
                     </button>
+
                     <span className="w-7 text-center font-semibold">
                       {item.quantity}
                     </span>
+
                     <button
-                      onClick={() => handleIncrement(item.id, item.quantity)}
+                      onClick={() =>
+                        handleIncrement(item.id, item.quantity)
+                      }
                       className="size-8 rounded-full bg-background flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
                       aria-label="Aumentar cantidad"
                     >
@@ -262,7 +321,8 @@ function Reservar() {
                   </div>
 
                   <p className="font-bold text-primary w-20 text-right">
-                    RD${(item.price * item.quantity).toFixed(0)}
+                    RD$
+                    {(item.price * item.quantity).toFixed(0)}
                   </p>
 
                   <button
@@ -280,6 +340,7 @@ function Reservar() {
           {items.length > 0 && (
             <div className="border-t border-border mt-4 pt-4 flex items-center justify-between">
               <span className="font-display text-lg">Total</span>
+
               <span className="font-display text-2xl font-bold text-primary">
                 RD${totalPrice().toFixed(2)}
               </span>
@@ -291,11 +352,15 @@ function Reservar() {
       {/* ── BARRA FIJA INFERIOR ── */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-4">
         <div className="flex-1">
-          <p className="text-xs text-muted-foreground leading-none mb-0.5">Total</p>
+          <p className="text-xs text-muted-foreground leading-none mb-0.5">
+            Total
+          </p>
+
           <p className="font-display text-xl font-bold text-primary">
             RD${totalPrice().toFixed(2)}
           </p>
         </div>
+
         <button
           onClick={handleOpenForm}
           className="flex items-center gap-2 bg-[#25D366] text-white px-6 py-3 rounded-full font-bold text-base active:scale-95 transition-transform"
@@ -309,7 +374,10 @@ function Reservar() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
           <div className="w-full max-w-lg bg-card rounded-t-3xl p-6 max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-2xl font-bold">Tus datos</h2>
+              <h2 className="font-display text-2xl font-bold">
+                Tus datos
+              </h2>
+
               <button
                 onClick={() => setFormOpen(false)}
                 className="size-10 rounded-full bg-secondary flex items-center justify-center hover:bg-accent"
@@ -319,59 +387,107 @@ function Reservar() {
             </div>
 
             <div className="space-y-5">
-              <Field label={`${E.person} Tu nombre`}>
+              <Field
+                label={`${E.person} Tu nombre`}
+                htmlFor="name"
+              >
                 <input
+                  id="name"
+                  name="name"
                   type="text"
                   placeholder="Ej: María González"
                   value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      name: e.target.value,
+                    })
+                  }
                   className={inputCls}
                   autoComplete="name"
                 />
               </Field>
 
-              <Field label={`${E.phone} Tu teléfono`}>
+              <Field
+                label={`${E.phone} Tu teléfono`}
+                htmlFor="phone"
+              >
                 <input
+                  id="phone"
+                  name="phone"
                   type="tel"
                   placeholder="Ej: 809-555-1234"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      phone: e.target.value,
+                    })
+                  }
                   className={inputCls}
                   autoComplete="tel"
                 />
               </Field>
 
-              <Field label={`${E.pin} Dirección de entrega`}>
+              <Field
+                label={`${E.pin} Dirección de entrega`}
+                htmlFor="address"
+              >
                 <AddressPicker
                   value={form.address}
-                  onChange={(address) => setForm({ ...form, address })}
+                  onChange={(address) =>
+                    setForm({
+                      ...form,
+                      address,
+                    })
+                  }
                 />
               </Field>
 
-              <Field label={`${E.truck} ¿Cómo recibirás tu pedido?`}>
+              <Field
+                label={`${E.truck} ¿Cómo recibirás tu pedido?`}
+                htmlFor="mode"
+              >
                 <div className="grid grid-cols-2 gap-3">
                   {(["entrega", "recogida"] as const).map((m) => (
                     <button
                       key={m}
                       type="button"
-                      onClick={() => setForm({ ...form, mode: m })}
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          mode: m,
+                        })
+                      }
                       className={`py-4 rounded-2xl text-lg font-bold border-2 transition-all active:scale-95 ${
                         form.mode === m
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border bg-secondary text-secondary-foreground"
                       }`}
                     >
-                      {m === "entrega" ? `${E.truck} Entrega` : `${E.store} Recogida`}
+                      {m === "entrega"
+                        ? `${E.truck} Entrega`
+                        : `${E.store} Recogida`}
                     </button>
                   ))}
                 </div>
               </Field>
 
-              <Field label={`${E.notes} Notas (opcional)`}>
+              <Field
+                label={`${E.notes} Notas (opcional)`}
+                htmlFor="notes"
+              >
                 <textarea
+                  id="notes"
+                  name="notes"
                   placeholder="Alergias, instrucciones especiales..."
                   value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      notes: e.target.value,
+                    })
+                  }
                   rows={3}
                   className={`${inputCls} resize-none`}
                 />
@@ -396,21 +512,29 @@ function Reservar() {
             <h3 className="text-xl font-bold text-center mb-2">
               ¿Todo está correcto?
             </h3>
+
             <p className="text-base text-muted-foreground text-center mb-1">
               {form.name} · {form.phone}
             </p>
+
             <p className="text-base text-muted-foreground text-center mb-4">
-              {form.mode === "entrega" ? `${E.truck} Entrega` : `${E.store} Recogida`} · {form.address}
+              {form.mode === "entrega"
+                ? `${E.truck} Entrega`
+                : `${E.store} Recogida`}{" "}
+              · {form.address}
             </p>
 
-            {/* ── MEJORA 1: Resumen completo de productos en el modal ── */}
             <div className="bg-secondary rounded-2xl p-4 mb-4">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                 Tu pedido
               </p>
+
               <ul className="space-y-2">
                 {items.map((item) => (
-                  <li key={item.id} className="flex items-center gap-3">
+                  <li
+                    key={item.id}
+                    className="flex items-center gap-3"
+                  >
                     <div className="size-9 rounded-lg bg-gradient-warm flex items-center justify-center text-lg shrink-0 overflow-hidden">
                       {item.image ? (
                         <img
@@ -422,17 +546,24 @@ function Reservar() {
                         item.emoji
                       )}
                     </div>
+
                     <span className="flex-1 text-sm font-medium truncate">
                       {item.quantity}x {item.name}
                     </span>
+
                     <span className="text-sm font-bold text-primary shrink-0">
-                      RD${(item.price * item.quantity).toFixed(0)}
+                      RD$
+                      {(item.price * item.quantity).toFixed(0)}
                     </span>
                   </li>
                 ))}
               </ul>
+
               <div className="border-t border-border mt-3 pt-3 flex justify-between items-center">
-                <span className="text-sm font-semibold">Total</span>
+                <span className="text-sm font-semibold">
+                  Total
+                </span>
+
                 <span className="font-display font-bold text-xl text-primary">
                   RD${totalPrice().toFixed(2)}
                 </span>
@@ -449,6 +580,7 @@ function Reservar() {
               >
                 {E.pencil} Editar
               </button>
+
               <button
                 onClick={async () => {
                   setConfirmOpen(false);
